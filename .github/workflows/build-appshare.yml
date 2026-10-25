@@ -98,8 +98,17 @@ jobs:
 
       - name: Build APK
         run: |
+          set -o pipefail
           ./gradlew assembleRelease --stacktrace -x lint \
-            -PappVersionName="${APP_VERSION_NAME}"
+            -PappVersionName="${APP_VERSION_NAME}" 2>&1 | tee build.log
+
+      # Puts the real Gradle/Kotlin error into an annotation (visible without opening the raw log)
+      - name: Report build errors
+        if: failure()
+        run: |
+          grep -n -E "^e: |What went wrong|Execution failed|Script compilation|Unresolved reference|Caused by: .*(Exception|Error)" -A4 build.log \
+            | head -c 3500 > errors.txt || true
+          echo "::error title=Gradle build failed::$(sed ':a;N;$!ba;s/\n/%0A/g' errors.txt)"
 
       - name: Rename APK
         run: |

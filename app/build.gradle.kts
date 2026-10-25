@@ -1,4 +1,6 @@
+import java.io.File
 import java.io.FileInputStream
+import java.security.KeyStore
 import java.util.Properties
 
 plugins {
@@ -48,10 +50,10 @@ val resolvedVersionCode: Int = (project.findProperty("appVersionCode") as String
  * True only if the keystore exists, is not empty and can be opened with the given password.
  * Forks / PR builds do not have the signing secrets, so the file written by CI is empty or garbage.
  */
-fun isUsableKeystore(file: java.io.File, storePassword: String): Boolean {
+fun isUsableKeystore(file: File, storePassword: String): Boolean {
     if (!file.exists() || file.length() == 0L || storePassword.isEmpty()) return false
     return try {
-        java.security.KeyStore.getInstance(file, storePassword.toCharArray())
+        KeyStore.getInstance(file, storePassword.toCharArray())
         true
     } catch (e: Exception) {
         false
