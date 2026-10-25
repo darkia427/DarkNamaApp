@@ -1,5 +1,11 @@
 package com.dark.darknama.screens
 
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -92,6 +98,7 @@ fun FavoritesScreen(navController: NavController) {
     var showCreateGroupDialog by remember { mutableStateOf(false) }
     var showMoveToGroupDialog by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf<FavoriteItem?>(null) }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
     
     // Focus requesters for handling TV remote navigation
     val focusRequester = remember { FocusRequester() }
@@ -525,7 +532,7 @@ fun FavoritesScreen(navController: NavController) {
                 }
                 
                 // Delete all button (only show if there are favorites)
-                if (favorites.isNotEmpty()) {
+                if (tab == 0 && favorites.isNotEmpty()) {
                     IconButton(
                         onClick = { showDeleteAllDialog = true },
                         modifier = Modifier
@@ -546,6 +553,24 @@ fun FavoritesScreen(navController: NavController) {
             }
         }
         
+        // ---- Favorites / History switch ----
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+            SegmentedButton(
+                selected = tab == 0,
+                onClick = { tab = 0 },
+                shape = SegmentedButtonDefaults.itemShape(0, 2)
+            ) { Text(stringResource(R.string.favorites)) }
+            SegmentedButton(
+                selected = tab == 1,
+                onClick = { tab = 1 },
+                shape = SegmentedButtonDefaults.itemShape(1, 2)
+            ) { Text(stringResource(R.string.history)) }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (tab == 0) {
         // Group selector
         AnimatedVisibility(
             visible = true,
@@ -803,6 +828,9 @@ fun FavoritesScreen(navController: NavController) {
                     }
                 }
             }
+        }
+        } else {
+            HistoryContent(navController)
         }
     }
 }

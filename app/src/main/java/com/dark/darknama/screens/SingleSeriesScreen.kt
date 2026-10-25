@@ -112,6 +112,7 @@ fun SingleSeriesScreen(
             onPlay = { source ->
                 showSourceDialog = false
                 // Launch video player activity with the selected source URL and episode info
+                recordSeriesPlay(context, series!!, selectedSeason, selectedEpisode!!)
                 VideoPlayerActivity.startWithEpisodeInfo(
                     context,
                     source.url,
@@ -150,6 +151,7 @@ fun SingleSeriesScreen(
                         showSourceDialog = true
                     } else {
                         // Directly play if there's only one source
+                        recordSeriesPlay(context, series!!, selectedSeason, episode)
                         VideoPlayerActivity.startWithEpisodeInfo(
                             context, 
                             episode.sources[0].url,
@@ -808,6 +810,7 @@ fun SeriesDetailsContent(
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)
                     )
                     
+                    SeasonCopyBar(selectedSeason)
                     selectedSeason.episodes.forEach { episode ->
                         val isEpisodeWatched = StorageUtils.isEpisodeWatched(context, series.id, selectedSeason.id, episode.id)
                         EpisodeItem(

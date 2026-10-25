@@ -74,7 +74,8 @@ import com.dark.darknama.utils.StorageUtils
 @Composable
 fun SeriesScreen(
     viewModel: SeriesViewModel = viewModel(),
-    navController: NavController? = null
+    navController: NavController? = null,
+    showHeader: Boolean = true
 ) {
     val series = viewModel.series
     val isLoading = viewModel.isLoading
@@ -92,6 +93,7 @@ fun SeriesScreen(
     
     Column(modifier = Modifier.fillMaxSize()) {
         // Top header with title and settings gear
+        if (showHeader) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,6 +108,7 @@ fun SeriesScreen(
                 color = MaterialTheme.colorScheme.primary
             )
             SettingsIconButton(navController = navController)
+        }
         }
         
         // Genre filter section

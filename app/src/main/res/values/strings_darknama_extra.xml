@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="latest">Latest</string>
+    <string name="titles">Titles</string>
+    <string name="history">History</string>
+    <string name="no_history_yet">Nothing watched yet</string>
+    <string name="clear_history">Clear history</string>
+    <string name="row_latest_movies">Latest movies</string>
+    <string name="row_latest_series">Latest series</string>
+    <string name="row_top_movies">Top rated movies</string>
+    <string name="row_top_series">Top rated series</string>
+    <string name="server_settings">Servers</string>
+    <string name="server_n">Server %1$d</string>
+    <string name="server_custom">Custom address</string>
+    <string name="server_custom_hint">Custom address (optional)</string>
+    <string name="server_reset">Reset to default</string>
+    <string name="server_hint">The selected server is used first; the others are used automatically if it fails. Reload the lists after changing it.</string>
+    <string name="save">Save</string>
+    <string name="proxy_settings">Live TV proxies</string>
+    <string name="proxy_hint">One per line, must contain {url}</string>
+    <string name="proxy_note">If a channel does not play normally, the next proxy in this list is tried automatically.</string>
+    <string name="copy_all_quality">Copy all %1$s (%2$d)</string>
+    <string name="copy_all_links">Copy all (every quality)</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="latest">جدیدترین‌ها</string>
+    <string name="titles">عنوان‌ها</string>
+    <string name="history">تاریخچه</string>
+    <string name="no_history_yet">هنوز چیزی تماشا نکرده‌اید</string>
+    <string name="clear_history">پاک کردن تاریخچه</string>
+    <string name="row_latest_movies">جدیدترین فیلم‌ها</string>
+    <string name="row_latest_series">جدیدترین سریال‌ها</string>
+    <string name="row_top_movies">برترین فیلم‌ها</string>
+    <string name="row_top_series">برترین سریال‌ها</string>
+    <string name="server_settings">سرورها</string>
+    <string name="server_n">سرور %1$d</string>
+    <string name="server_custom">آدرس دستی</string>
+    <string name="server_custom_hint">آدرس دستی (اختیاری)</string>
+    <string name="server_reset">بازگشت به پیش‌فرض</string>
+    <string name="server_hint">ابتدا سرور انتخاب‌شده استفاده می‌شود؛ اگر کار نکرد، بقیه خودکار امتحان می‌شوند. بعد از تغییر، لیست‌ها را دوباره بارگذاری کنید.</string>
+    <string name="save">ذخیره</string>
+    <string name="proxy_settings">پروکسی شبکه‌های زنده</string>
+    <string name="proxy_hint">هر خط یک پروکسی، باید شامل {url} باشد</string>
+    <string name="proxy_note">اگر شبکه‌ای با حالت عادی پخش نشد، پروکسی بعدیِ این لیست خودکار امتحان می‌شود.</string>
+    <string name="copy_all_quality">کپی همه %1$s (%2$d)</string>
+    <string name="copy_all_links">کپی همه (همه کیفیت‌ها)</string>
+</resources>

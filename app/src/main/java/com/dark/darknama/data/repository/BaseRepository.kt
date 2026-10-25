@@ -1,5 +1,6 @@
 package com.dark.darknama.data.repository
 
+import com.dark.darknama.utils.ServerManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -11,53 +12,34 @@ open class BaseRepository {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
-    
+
     protected val API_KEY = "4F5A9C3D9A86FA54EACEDDD635185"
-    
-    // Helper servers array
-    protected val helperServers = arrayOf(
-        "https://hostinnegar.com",
-        "https://windowsdiba.info"
-    )
-    
+
+    private val hostRegex = Regex("^https?://[^/]+")
+
+    /**
+     * Sends the request to the selected server first (Settings -> Servers),
+     * then to the remaining servers as fallbacks.
+     */
     protected suspend fun executeRequest(
         primaryUrl: String,
         requestBuilder: (String) -> Request
-    ): String {
-        return withContext(Dispatchers.IO) {
-            // First, try the primary server
+    ): String = withContext(Dispatchers.IO) {
+        var last: Exception? = null
+        for (base in ServerManager.orderedBases()) {
             try {
-                val primaryRequest = requestBuilder(primaryUrl)
-                client.newCall(primaryRequest).execute().use { response ->
+                val url = primaryUrl.replace(hostRegex, base)
+                client.newCall(requestBuilder(url)).execute().use { response ->
                     if (response.isSuccessful) {
                         return@withContext response.body?.string()
-                            ?: throw Exception("Empty response body from primary server")
-                    } else {
-                        throw Exception("Primary server returned error: ${response.code}")
+                            ?: throw Exception("Empty response body")
                     }
+                    throw Exception("Server returned error: ${response.code}")
                 }
-            } catch (primaryException: Exception) {
-                // If primary server fails, try helper servers
-                for (helperServer in helperServers) {
-                    try {
-                        // Replace the host in the URL with the helper server
-                        val helperUrl = primaryUrl.replace(Regex("^https?://[^/]+"), helperServer)
-                        val helperRequest = requestBuilder(helperUrl)
-                        client.newCall(helperRequest).execute().use { response ->
-                            if (response.isSuccessful) {
-                                return@withContext response.body?.string()
-                                    ?: throw Exception("Empty response body from helper server")
-                            }
-                        }
-                    } catch (helperException: Exception) {
-                        // Continue to next helper server
-                        continue
-                    }
-                }
-                
-                // If all servers fail, throw the original exception
-                throw primaryException
+            } catch (e: Exception) {
+                last = e
             }
         }
+        throw last ?: Exception("No server available")
     }
 }

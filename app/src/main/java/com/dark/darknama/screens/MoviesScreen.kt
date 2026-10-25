@@ -76,7 +76,8 @@ import com.dark.darknama.utils.StorageUtils
 @Composable
 fun MoviesScreen(
     viewModel: MoviesViewModel = viewModel(),
-    navController: NavController? = null
+    navController: NavController? = null,
+    showHeader: Boolean = true
 ) {
     val movies = viewModel.movies
     val isLoading = viewModel.isLoading
@@ -94,6 +95,7 @@ fun MoviesScreen(
     
     Column(modifier = Modifier.fillMaxSize()) {
         // Top header with network logo (opens website popup)
+        if (showHeader) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -114,6 +116,7 @@ fun MoviesScreen(
                 // Settings gear at the top — opens the Settings screen
                 SettingsIconButton(navController = navController)
             }
+        }
         }
         
         // Genre filter section

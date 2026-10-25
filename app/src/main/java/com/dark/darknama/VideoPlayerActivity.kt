@@ -1,5 +1,11 @@
 package com.dark.darknama
 
+import android.widget.Toast
+import com.dark.darknama.utils.HistoryStorage
+import com.dark.darknama.utils.PlaybackSession
+import com.dark.darknama.utils.ProxyManager
+import com.dark.darknama.utils.ProxyResolver
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -172,6 +178,7 @@ class VideoPlayerActivity : ComponentActivity() {
         const val EXTRA_EPISODE_ID = "episode_id"
         const val EXTRA_USER_AGENT = "user_agent"
         const val EXTRA_REFERER = "referer"
+        const val EXTRA_LIVE = "is_live"
         const val REQUEST_WRITE_SETTINGS = 1001
         
         fun start(context: Context, videoUrl: String) {
@@ -190,6 +197,7 @@ class VideoPlayerActivity : ComponentActivity() {
                 putExtra(EXTRA_VIDEO_URL, videoUrl)
                 if (!userAgent.isNullOrBlank()) putExtra(EXTRA_USER_AGENT, userAgent)
                 if (!referer.isNullOrBlank()) putExtra(EXTRA_REFERER, referer)
+                putExtra(EXTRA_LIVE, true)
             }
             context.startActivity(intent)
         }
@@ -212,6 +220,9 @@ class VideoPlayerActivity : ComponentActivity() {
     private var episodeId: Int? = null
     private var streamUserAgent: String? = null
     private var streamReferer: String? = null
+    private var isLive = false
+    // Key used to resume movies / episodes from the last watched position
+    private var contentKey: String? = null
     private var playerInitialized = false
     private var isActivityResumed = false
     private var hasMarkedAsWatched = false
@@ -247,6 +258,13 @@ class VideoPlayerActivity : ComponentActivity() {
         episodeId = intent.getIntExtra(EXTRA_EPISODE_ID, -1).takeIf { it != -1 }
         streamUserAgent = intent.getStringExtra(EXTRA_USER_AGENT)
         streamReferer = intent.getStringExtra(EXTRA_REFERER)
+        isLive = intent.getBooleanExtra(EXTRA_LIVE, false)
+        val pendingKey = PlaybackSession.take()
+        contentKey = when {
+            isLive -> null
+            seriesId != null && seasonId != null && episodeId != null -> "series_${seriesId}_${seasonId}_${episodeId}"
+            else -> pendingKey
+        }
         
         if (videoUrl != null) {
             setContent {
@@ -257,6 +275,8 @@ class VideoPlayerActivity : ComponentActivity() {
                     episodeId = episodeId,
                     userAgent = streamUserAgent,
                     referer = streamReferer,
+                    isLive = isLive,
+                    contentKey = contentKey,
                     externalShowControls = showControlsState,
                     externalShowSettingsDialog = showSettingsDialogState,
                     onBack = this::finish
@@ -372,8 +392,20 @@ class VideoPlayerActivity : ComponentActivity() {
         }
     }
     
+    /** Remembers where the user stopped (movies / episodes only). */
+    private fun saveResumePosition() {
+        val key = contentKey ?: return
+        val player = exoPlayer ?: return
+        try {
+            HistoryStorage.savePosition(this, key, player.currentPosition, player.duration.coerceAtLeast(0L))
+        } catch (e: Exception) {
+            // Ignore storage / player errors
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        saveResumePosition()
         try {
             exoPlayer?.release()
         } catch (e: Exception) {
@@ -413,6 +445,7 @@ class VideoPlayerActivity : ComponentActivity() {
     
     override fun onPause() {
         super.onPause()
+        saveResumePosition()
         isActivityResumed = false
         
         // Stop player completely when activity pauses (app switch or screen off)
@@ -436,6 +469,8 @@ fun VideoPlayerScreen(
     episodeId: Int?,
     userAgent: String? = null,
     referer: String? = null,
+    isLive: Boolean = false,
+    contentKey: String? = null,
     externalShowControls: androidx.compose.runtime.MutableState<Boolean>? = null,
     externalShowSettingsDialog: androidx.compose.runtime.MutableState<Boolean>? = null,
     onBack: () -> Unit,
@@ -527,6 +562,12 @@ fun VideoPlayerScreen(
         }
     }
     
+    // Where to resume (movies / episodes), minus 3 seconds of context
+    val startPositionMs = remember(contentKey) {
+        if (isLive || contentKey == null) 0L
+        else (HistoryStorage.getPosition(context, contentKey) - 3000L).coerceAtLeast(0L)
+    }
+
     val exoPlayer = remember(context) {
         try {
             // Create track selector for track selection
@@ -553,7 +594,8 @@ fun VideoPlayerScreen(
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build().apply {
                     try {
-                        setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+                        if (startPositionMs > 0L) setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)), startPositionMs)
+                        else setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
                         prepare()
                         // If we're retrying, seek to the current position
                         if (isRetrying && currentPosition > 0) {
@@ -574,6 +616,68 @@ fun VideoPlayerScreen(
         }
     }
     
+    // ---- Live TV: automatic proxy fallback (direct -> proxy 1 -> proxy 2 ...) ----
+    val proxies = remember(context) { if (isLive) ProxyManager.list(context) else emptyList() }
+    var proxyIndex by remember { androidx.compose.runtime.mutableIntStateOf(-1) }   // -1 = direct
+    var readyOnce by remember { mutableStateOf(false) }
+    var errorCount by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+    fun proxyMediaSource(index: Int): androidx.media3.exoplayer.source.MediaSource {
+        val http = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(30000)
+            .setReadTimeoutMs(30000)
+        val upstream = androidx.media3.datasource.DefaultDataSource.Factory(context, http)
+        val factory = androidx.media3.datasource.ResolvingDataSource.Factory(upstream, ProxyResolver(proxies[index]))
+        return androidx.media3.exoplayer.source.DefaultMediaSourceFactory(factory)
+            .createMediaSource(MediaItem.fromUri(Uri.parse(videoUrl)))
+    }
+
+    // Reload the stream through whichever route (direct / proxy) is currently active
+    fun reloadMedia(player: ExoPlayer) {
+        if (isLive && proxyIndex >= 0 && proxyIndex < proxies.size) {
+            player.setMediaSource(proxyMediaSource(proxyIndex))
+        } else {
+            player.setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+        }
+    }
+
+    // Switch to the next proxy. Returns false when there is none left.
+    fun advanceProxy(): Boolean {
+        val player = exoPlayer ?: return false
+        if (!isLive || proxyIndex + 1 >= proxies.size) return false
+        proxyIndex++
+        readyOnce = false
+        errorCount = 0
+        Toast.makeText(context, "Proxy ${proxyIndex + 1}/${proxies.size}…", Toast.LENGTH_SHORT).show()
+        player.setMediaSource(proxyMediaSource(proxyIndex))
+        player.prepare()
+        player.playWhenReady = true
+        isRetrying = false
+        playerError = null
+        return true
+    }
+
+    // Not playing 12 seconds after (re)loading a live stream -> try the next proxy
+    LaunchedEffect(exoPlayer, proxyIndex) {
+        if (!isLive || exoPlayer == null) return@LaunchedEffect
+        delay(12_000)
+        if (exoPlayer.playbackState != Player.STATE_READY) advanceProxy()
+    }
+
+    // Save the resume position every 5 seconds while playing
+    LaunchedEffect(exoPlayer, contentKey) {
+        if (isLive || contentKey == null || exoPlayer == null) return@LaunchedEffect
+        while (true) {
+            delay(5000)
+            if (exoPlayer.isPlaying) {
+                HistoryStorage.savePosition(
+                    context, contentKey, exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L)
+                )
+            }
+        }
+    }
+
     // Listen to track changes
     val trackListener = remember(exoPlayer) {
         object : Player.Listener {
@@ -659,6 +763,8 @@ fun VideoPlayerScreen(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 try {
                     if (playbackState == Player.STATE_READY) {
+                        readyOnce = true
+                        errorCount = 0
                         duration = exoPlayer?.duration ?: 0L
                         
                         // After the player is ready (especially after a retry), 
@@ -690,6 +796,10 @@ fun VideoPlayerScreen(
             }
             
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                // Live TV: if the stream never started (or keeps failing), move to the next proxy
+                errorCount++
+                if (isLive && (!readyOnce || errorCount >= 3) && advanceProxy()) return
+
                 // Don't show error message, just mark as retrying
                 isRetrying = true
                 playerError = error.message
@@ -704,7 +814,7 @@ fun VideoPlayerScreen(
                     try {
                         exoPlayer?.let { player ->
                             // Retry loading the media
-                            player.setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+                            reloadMedia(player)
                             player.prepare()
                             // Seek to the stored position after preparing
                             player.seekTo(retryPosition)
@@ -1156,7 +1266,7 @@ fun VideoPlayerScreen(
                                                 // Store current position and playback state before retrying
                                                 val retryPosition = currentPosition
                                                 val wasPlaying = isPlaying // Store whether it was playing before the retry
-                                                player.setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+                                                reloadMedia(player)
                                                 player.prepare()
                                                 // Seek to the stored position after preparing
                                                 player.seekTo(retryPosition)

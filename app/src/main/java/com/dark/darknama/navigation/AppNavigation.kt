@@ -1,5 +1,10 @@
 package com.dark.darknama.navigation
 
+import com.dark.darknama.screens.LatestScreen
+import com.dark.darknama.screens.TitlesScreen
+import com.dark.darknama.screens.settings.ServerSettingsScreen
+import com.dark.darknama.ui.home.HomeViewModel
+
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -48,6 +53,7 @@ fun AppNavigation(
     val searchViewModel = viewModel<SearchViewModel>()
     val countryViewModel = viewModel<CountryViewModel>()
     val liveTvViewModel = viewModel<LiveTvViewModel>()
+    val homeViewModel = viewModel<HomeViewModel>()
     
     NavHost(
         navController = navController,
@@ -58,7 +64,7 @@ fun AppNavigation(
             SplashScreen(
                 onTimeout = {
                     navController.popBackStack()
-                    navController.navigate(AppScreens.Movies.route) {
+                    navController.navigate(AppScreens.Latest.route) {
                         // Prevent re-adding splash to back stack
                         launchSingleTop = true
                     }
@@ -81,6 +87,19 @@ fun AppNavigation(
             )
         }
         
+        composable(route = AppScreens.Latest.route) {
+            LatestScreen(viewModel = homeViewModel, navController = navController)
+        }
+        composable(route = AppScreens.Titles.route) {
+            TitlesScreen(
+                moviesViewModel = moviesViewModel,
+                seriesViewModel = seriesViewModel,
+                navController = navController
+            )
+        }
+        composable(route = AppScreens.ServerSettings.route) {
+            ServerSettingsScreen(navController = navController)
+        }
         composable(route = AppScreens.Movies.route) {
             MoviesScreen(viewModel = moviesViewModel, navController = navController)
         }

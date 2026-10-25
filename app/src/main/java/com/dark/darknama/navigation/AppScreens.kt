@@ -1,5 +1,9 @@
 package com.dark.darknama.navigation
 
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material.icons.filled.VideoLibrary
+
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -120,6 +124,26 @@ sealed class AppScreens(
         showSidebar = false
     )
     
+    data object Latest : AppScreens(
+        route = "latest",
+        resourceId = R.string.latest,
+        icon = Icons.Default.NewReleases
+    )
+
+    data object Titles : AppScreens(
+        route = "titles",
+        resourceId = R.string.titles,
+        icon = Icons.Default.VideoLibrary
+    )
+
+    data object ServerSettings : AppScreens(
+        route = "settings/servers",
+        resourceId = R.string.server_settings,
+        icon = Icons.Default.Dns,
+        showBottomBar = false,
+        showSidebar = false
+    )
+
     data object Country : AppScreens(
         route = "country/{countryId}",
         resourceId = R.string.country,
@@ -130,6 +154,6 @@ sealed class AppScreens(
     companion object {
         // Screens shown in the bottom navigation bar (mobile) and sidebar (TV).
         // Settings moved to a gear icon at the top of each screen.
-        val screens = listOf(Movies, Series, LiveTv, Search, Favorites)
+        val screens = listOf(Latest, Titles, LiveTv, Search)
     }
 }

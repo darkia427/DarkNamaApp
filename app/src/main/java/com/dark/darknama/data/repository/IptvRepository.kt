@@ -115,7 +115,7 @@ class IptvRepository {
                 }
                 response.body?.string() ?: throw Exception("Empty playlist response")
             }
-            val channels = parseM3u(body)
+            val channels = LogoRepository.fill(client, parseM3u(body))
             if (channels.isNotEmpty()) {
                 cache[playlistUrl] = channels
             }

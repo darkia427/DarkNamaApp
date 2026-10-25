@@ -211,6 +211,21 @@ fun LiveTvScreen(
             )
           }
           item {
+            // All channels
+            FilterChip(
+                selected = viewModel.browseMode == TvBrowseMode.ALL,
+                onClick = { viewModel.selectAll() },
+                label = {
+                    val n = if (viewModel.browseMode == TvBrowseMode.ALL) " (${viewModel.allChannels.size})" else ""
+                    Text(text = stringResource(R.string.tv_all) + n, maxLines = 1)
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                )
+            )
+          }
+          item {
             // Country picker
             FilterChip(
                 selected = viewModel.browseMode == TvBrowseMode.COUNTRY,
@@ -324,14 +339,14 @@ fun LiveTvScreen(
                     FilterChip(
                         selected = viewModel.selectedPersianCategory == null,
                         onClick = { viewModel.selectPersianCategory(null) },
-                        label = { Text(stringResource(R.string.tv_all)) }
+                        label = { Text(stringResource(R.string.tv_all) + " (${viewModel.allChannels.size})") }
                     )
                 }
                 items(viewModel.persianCategories) { category ->
                     FilterChip(
                         selected = viewModel.selectedPersianCategory == category,
                         onClick = { viewModel.selectPersianCategory(category) },
-                        label = { Text(category) }
+                        label = { Text("$category (${viewModel.persianCounts[category] ?: 0})") }
                     )
                 }
             }
@@ -508,7 +523,7 @@ fun LiveTvScreen(
             items = viewModel.countryList,
             isLoading = viewModel.isCountryListLoading,
             selectedItem = if (viewModel.browseMode == TvBrowseMode.COUNTRY) viewModel.selectedGroup else null,
-            itemLabel = { country -> IptvRepository.flagFor(country) + "  " + country },
+            itemLabel = { country -> IptvRepository.flagFor(country) + "  " + country + "  (" + (viewModel.countryCounts[country] ?: 0) + ")" },
             onItemSelected = { country ->
                 showCountryPicker = false
                 viewModel.selectCountry(country)
@@ -524,7 +539,7 @@ fun LiveTvScreen(
             items = viewModel.categoryList,
             isLoading = viewModel.isCategoryListLoading,
             selectedItem = if (viewModel.browseMode == TvBrowseMode.CATEGORY) viewModel.selectedGroup else null,
-            itemLabel = { it },
+            itemLabel = { c -> c + "  (" + (viewModel.categoryCounts[c] ?: 0) + ")" },
             onItemSelected = { category ->
                 showCategoryPicker = false
                 viewModel.selectCategory(category)
@@ -589,27 +604,8 @@ private fun ChannelCard(
                     .background(Color.White.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (channel.logo.isNotEmpty()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(channel.logo)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = channel.name,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(6.dp),
-                        contentScale = ContentScale.Fit,
-                        error = androidx.compose.ui.res.painterResource(id = R.drawable.splash_logo)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.LiveTv,
-                        contentDescription = channel.name,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
+                ChannelLogo(name = channel.name, logo = channel.logo)
+
 
                 // ---- Favorite (star) toggle, drawn above the logo ----
                 IconButton(

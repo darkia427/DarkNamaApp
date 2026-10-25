@@ -82,6 +82,16 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
     var favoriteChannels by mutableStateOf<List<FavoriteChannel>>(emptyList())
         private set
 
+    /** Number of channels per country / category (shown next to the names) */
+    var countryCounts by mutableStateOf<Map<String, Int>>(emptyMap())
+        private set
+
+    var categoryCounts by mutableStateOf<Map<String, Int>>(emptyMap())
+        private set
+
+    var persianCounts by mutableStateOf<Map<String, Int>>(emptyMap())
+        private set
+
     init {
         reloadFavorites()
         loadChannels()
@@ -127,6 +137,14 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
     // ------------------------------------------------------------------
     // Browse modes
     // ------------------------------------------------------------------
+
+    /** Show every channel of the full playlist */
+    fun selectAll() {
+        browseMode = TvBrowseMode.ALL
+        selectedGroup = null
+        selectedPersianCategory = null
+        loadChannels()
+    }
 
     /** Reset to the default Persian channel list */
     fun selectPersianDefault() {
@@ -190,6 +208,8 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
                     .distinct()
                     .sorted()
                     .toList()
+                countryCounts = list.map { it.group.trim() }.filter { it.isNotEmpty() }
+                    .groupingBy { it }.eachCount()
             } catch (_: Exception) {
                 // Picker will show an error/retry state via empty list
             } finally {
@@ -212,6 +232,8 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
                     .distinct()
                     .sorted()
                     .toList()
+                categoryCounts = list.flatMap { it.group.split(';') }.map { it.trim() }
+                    .filter { it.isNotEmpty() }.groupingBy { it }.eachCount()
             } catch (_: Exception) {
                 // Picker will show an error/retry state via empty list
             } finally {
@@ -234,6 +256,7 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
                     TvBrowseMode.PERSIAN -> IptvRepository.PERSIAN_PLAYLIST_URL
                     TvBrowseMode.COUNTRY -> IptvRepository.COUNTRY_PLAYLIST_URL
                     TvBrowseMode.CATEGORY -> IptvRepository.CATEGORY_PLAYLIST_URL
+                    TvBrowseMode.ALL -> IptvRepository.CATEGORY_PLAYLIST_URL
                     TvBrowseMode.FAVORITES -> IptvRepository.PERSIAN_PLAYLIST_URL // unreachable
                 }
                 val result = repository.getChannels(url, forceRefresh)
@@ -246,6 +269,8 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
                         .distinct()
                         .sorted()
                         .toList()
+                    persianCounts = result.flatMap { it.group.split(';') }.map { it.trim() }
+                        .filter { it.isNotEmpty() }.groupingBy { it }.eachCount()
                 }
                 applyFilters()
             } catch (e: Exception) {
@@ -284,6 +309,9 @@ class LiveTvViewModel(application: Application) : AndroidViewModel(application) 
                         channel.group.split(';').any { it.trim() == category }
                     }
                 }
+            }
+            TvBrowseMode.ALL -> {
+                // No group filter - show everything
             }
             TvBrowseMode.FAVORITES -> {
                 // Favorites are already the full working set

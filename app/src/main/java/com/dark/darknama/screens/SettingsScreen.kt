@@ -2,6 +2,9 @@
 
 package com.dark.darknama.screens
 
+import androidx.compose.material.icons.filled.Dns
+import com.dark.darknama.utils.ServerManager
+
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -303,6 +306,17 @@ fun SettingsScreen(
                 title = stringResource(R.string.font_settings),
                 summary = fontLabel,
                 onClick = { navController?.navigate(AppScreens.FontSettings.route) }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // ---------- Servers ----------
+        item {
+            SettingsNavigationCard(
+                icon = Icons.Default.Dns,
+                title = stringResource(R.string.server_settings),
+                summary = stringResource(R.string.server_n, ServerManager.selected() + 1),
+                onClick = { navController?.navigate(AppScreens.ServerSettings.route) }
             )
             Spacer(modifier = Modifier.height(12.dp))
         }

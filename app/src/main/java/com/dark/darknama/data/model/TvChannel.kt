@@ -25,6 +25,7 @@ data class TvChannel(
  * Browsing modes for the Live TV section.
  */
 enum class TvBrowseMode {
+    ALL,       // Every channel (index.m3u)
     PERSIAN,   // Default: Persian channels (languages/fas.m3u)
     COUNTRY,   // Browse by country (index.country.m3u)
     CATEGORY,  // Browse by category (index.m3u)

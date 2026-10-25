@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.dark.darknama.utils.ServerManager.init(applicationContext)
         // Set default orientation to portrait for mobile/tablet
         // For TV, we don't set orientation as it's typically fixed
         if (!DeviceUtils.isTv(this)) {
@@ -121,6 +122,7 @@ fun MainScreen(
         currentRoute == AppScreens.ThemeSettings.route -> AppScreens.ThemeSettings
         currentRoute == AppScreens.PlayerSettings.route -> AppScreens.PlayerSettings
         currentRoute == AppScreens.FontSettings.route -> AppScreens.FontSettings
+        currentRoute == AppScreens.ServerSettings.route -> AppScreens.ServerSettings
         currentRoute == "settings" -> AppScreens.Settings
         currentRoute == "about" -> AppScreens.About
         else -> AppScreens.screens.find { it.route == currentRoute } ?: AppScreens.Movies
